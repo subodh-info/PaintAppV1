@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.19)
 project(PaintAppV1 LANGUAGES CXX)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
 qt_standard_project_setup()
 
@@ -11,6 +12,8 @@ qt_add_executable(PaintAppV1
     mainwindow.cpp
     mainwindow.h
     mainwindow.ui
+    paintcanvas.h paintcanvas.cpp
+    resource.qrc
 )
 
 target_link_libraries(PaintAppV1
@@ -18,6 +21,7 @@ target_link_libraries(PaintAppV1
         Qt::Core
         Qt::Widgets
 )
+target_link_libraries(PaintAppV1 PRIVATE Qt6::Widgets)
 
 include(GNUInstallDirs)
 
