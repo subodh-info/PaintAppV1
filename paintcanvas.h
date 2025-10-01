@@ -36,6 +36,9 @@ signals:
 
 private:
     void resizeImage(QImage *image, const QSize &newSize);
+    void drawLineTo(const QPoint &endPoint);
+    void drawRectTo(const QPoint &endPoint, bool ellipse = false);
+    void eraserUnder(const QPoint &topLeft);
 
     ToolType tool;
     bool fill;
@@ -43,7 +46,10 @@ private:
     int penWidth;
     QColor fillColor;
     QColor penColor;
+    QRectF lastRect;
     QPoint lastPoint;
+    QRectF lastEraserRect;
+
     QImage image;
 
 protected:

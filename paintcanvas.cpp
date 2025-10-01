@@ -7,7 +7,9 @@ PaintCanvas::PaintCanvas(QWidget *parent)
     drawing(false),
     penWidth(3),
     fillColor(Qt::red),
-    penColor(Qt::green)
+    penColor(Qt::green),
+    lastRect(QRectF(0, 0, 0, 0)),
+    lastEraserRect(QRectF(0,0,0,0))
 {}
 
 bool PaintCanvas::getFill() const
@@ -69,6 +71,164 @@ void PaintCanvas::resizeImage(QImage *image, const QSize &newSize) {
     painter.drawImage(QPoint(0, 0), *image);
     *image = newImage;
 }
-void PaintCanvas::resizeEvent(QResizeEvent *event) {
 
+void PaintCanvas::mousePressEvent(QMouseEvent *event) {
+    if(event->button() == Qt::LeftButton) {
+        lastPoint = event->pos();
+        drawing = true;
+    }
 }
+
+void PaintCanvas::mouseMoveEvent(QMouseEvent *event) {
+    if((event->buttons() & Qt::LeftButton) && drawing) {
+        if(tool == Pen){
+            drawLineTo(event->pos());
+        }
+
+        if(tool == Rect) {
+            drawRectTo(event->pos());
+        }
+
+        if(tool == Ellipse) {
+            drawRectTo(event->pos(), true);
+        }
+
+        if(tool == Eraser) {
+            eraserUnder(event->pos());
+        }
+    }
+}
+
+void PaintCanvas::mouseReleaseEvent(QMouseEvent *event) {
+    if(event->button() == Qt::LeftButton && drawing){
+        drawing = false;
+    }
+    if(tool == Pen){
+        drawLineTo(event->pos());
+    }
+
+    if(tool == Rect) {
+        drawRectTo(event->pos());
+    }
+
+    if(tool == Ellipse) {
+        drawRectTo(event->pos(), true);
+    }
+
+    if(tool == Eraser){
+        eraserUnder(event->pos());
+    }
+
+    // reset the last rect
+    lastRect = QRect(0, 0, 0, 0);
+}
+
+void PaintCanvas::resizeEvent(QResizeEvent *event) {
+    if(width() > image.width() || height() > image.height()){
+        int newWidth = qMax(width() + 128, image.width());
+        int newHeight = qMax(height() + 128, image.height());
+        resizeImage(&image, QSize(newWidth, newHeight));
+        update();
+    }
+    QWidget::resizeEvent(event);
+}
+
+void PaintCanvas::paintEvent(QPaintEvent *event) {
+    QPainter painter(this);
+    QRect rectToDraw = event->rect();
+    painter.drawImage(rectToDraw, image, rectToDraw);
+}
+
+void PaintCanvas::drawLineTo(const QPoint &endPoint) {
+    QPainter painter(&image);
+    painter.setPen(QPen(penColor, penWidth,
+                        Qt::SolidLine,
+                        Qt::RoundCap,
+                        Qt::RoundJoin));
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.drawLine(lastPoint, endPoint);
+    int adjustment = penWidth + 2;
+    update(QRect(lastPoint, endPoint)
+               .normalized()
+               .adjusted(-adjustment, -adjustment, + adjustment, adjustment));
+    lastPoint = endPoint;
+}
+
+void PaintCanvas::drawRectTo(const QPoint &endPoint, bool ellipse) {
+    QPainter painter(&image);
+    painter.setPen(QPen(penColor, penWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+
+    if(fill) {
+        painter.setBrush(fillColor);
+    }
+    else {
+        painter.setBrush(Qt::NoBrush);
+    }
+
+    if(!ellipse) {
+        painter.drawRect(QRect(lastPoint, endPoint));
+    }
+    else {
+        painter.drawEllipse(QRect(lastPoint, endPoint));
+    }
+
+    if(drawing) {
+        painter.setPen(QPen(Qt::white, penWidth + 2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+
+        if(fill) {
+            painter.setBrush(Qt::white);
+        }
+        else {
+            painter.setBrush(Qt::NoBrush);
+        }
+
+        if(!ellipse) {
+            painter.drawRect(lastRect);
+        }
+        else {
+            painter.drawEllipse(lastRect);
+        }
+
+        // reset the pen and brush
+        painter.setPen(QPen(penColor, penWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        painter.setBrush(fillColor);
+    }
+    lastRect = QRectF(lastPoint, endPoint);
+    update();
+}
+
+void PaintCanvas::eraserUnder(const QPoint &topLeft) {
+    QPainter painter(&image);
+
+    // erase last eraser rect
+    painter.setBrush(Qt::white);
+    painter.setPen(Qt::white);
+    painter.drawRect(lastEraserRect);
+
+    //Erase the content under current eraser rect. Brush and pen still white
+    QRect currentRect(topLeft,QSize(100,100));
+    painter.setBrush(Qt::white);
+    painter.setPen(Qt::white);
+    painter.drawRect(currentRect);
+
+
+    //Draw current eraser rect
+    painter.setBrush(Qt::black);
+    painter.setPen(Qt::black);
+    painter.drawRect(currentRect);
+
+    lastEraserRect = currentRect;
+
+    if(!drawing){
+        painter.setBrush(Qt::white);
+        painter.setPen(Qt::white);
+        painter.drawRect(lastEraserRect);
+        lastEraserRect = QRect(0,0,0,0);
+    }
+
+
+    update();
+}
+
+
+

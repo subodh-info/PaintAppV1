@@ -5,7 +5,7 @@
 #include <QSpinBox>
 #include <QToolBar>
 #include <QPixmap>
-
+#include <QColorDialog>
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -54,11 +54,30 @@ MainWindow::MainWindow(QWidget *parent)
     eraserButton->setIconSize(QSize(32, 32));
     eraserButton->setToolTip("Eraser");
 
+    connect(rectButton, &QPushButton::clicked, [=](){
+        canvas->setTool(PaintCanvas::Rect);
+        statusBar()->showMessage("Current tool: Pen");
+    });
+
+    connect(penButton, &QPushButton::clicked, [=](){
+        canvas->setTool(PaintCanvas::Pen);
+        statusBar()->showMessage("Current tool: Ellipse");
+    });
+
+    connect(ellipseButton, &QPushButton::clicked, [=](){
+        canvas->setTool(PaintCanvas::Ellipse);
+        statusBar()->showMessage("Current tool: Ellipse");
+    });
+
+    connect(eraserButton, &QPushButton::clicked, [=](){
+        canvas->setTool(PaintCanvas::Eraser);
+        statusBar()->showMessage("Current tool: Eraser");
+    });
     // Slots connection
-    connect(penWidthSpinBox, SIGNAL(valuechanged(int)), this, SLOT(penWidthChanged(int)));
+    connect(penWidthSpinBox, SIGNAL(valueChanged(int)), this, SLOT(penWidthChanged(int)));
     connect(penColorButton, SIGNAL(clicked()), this, SLOT(changePenColor()));
-    connect(fillColorButton, SIGNAL(clicked()), this, SLOT(changeFillcolor()));
-    connect(fillCheckBox, SIGNAL(clicked), this, SLOT(changeFillColor()));
+    connect(fillColorButton, SIGNAL(clicked()), this, SLOT(changeFillColor()));
+    connect(fillCheckBox, SIGNAL(clicked()), this, SLOT(changeFillProperty()));
 
     QToolBar *mainToolbar = new QToolBar(this);
     mainToolbar->setIconSize(QSize(32, 32));
@@ -81,22 +100,38 @@ MainWindow::MainWindow(QWidget *parent)
     mainToolbar->addWidget(eraserButton);
 
     addToolBar(Qt::TopToolBarArea, mainToolbar);
+
+    QString _css = QString("background-color: %1").arg(canvas->getPenColor().name());
+    penColorButton->setStyleSheet(_css);
+
+    _css = QString("background-color: %1").arg(canvas->getFillColor().name());
+    fillColorButton->setStyleSheet(_css);
 }
 
 void MainWindow::penWidthChanged(int width){
-
+    canvas->setPenWidth(width);
 }
 
 void MainWindow::changePenColor() {
-
+    QColor _color = QColorDialog::getColor(canvas->getPenColor());
+    if(_color.isValid()){
+        canvas->setPenColor(_color);
+        QString css = QString("background-color: %1").arg(_color.name());
+        penColorButton->setStyleSheet(css);
+    }
 }
 
 void MainWindow::changeFillColor() {
-
+    QColor _color = QColorDialog::getColor(canvas->getFillColor());
+    if(_color.isValid()) {
+        canvas->setFillColor(_color);
+        QString css = QString("background-color: %1").arg(_color.name());
+        fillColorButton->setStyleSheet(css);
+    }
 }
 
 void MainWindow::changeFillProperty() {
-
+    canvas->setFill(fillCheckBox->isCheckable());
 }
 
 MainWindow::~MainWindow()
